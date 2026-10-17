@@ -19,12 +19,14 @@ use embedded_graphics::{
 };
 use ssd1306::mode::BufferedGraphicsMode;
 
-struct Display {
+pub struct Display {
     ssd1306_driver: Ssd1306<
         I2CInterface<I2c<'static, Blocking>>,
         DisplaySize128x64,
         BufferedGraphicsMode<DisplaySize128x64>,
     >,
+    text_style:MonoTextStyle<'static,BinaryColor>,
+    line_height: i32,
 }
 
 impl Display {
@@ -45,12 +47,32 @@ impl Display {
         ssd1306_driver.init().unwrap();
         ssd1306_driver.clear(BinaryColor::Off).unwrap();
         _ = ssd1306_driver.flush();
+
+        let text_style = MonoTextStyle::new(&FONT_6X10, BinaryColor::On);
+
         Display{
-            ssd1306_driver
+            ssd1306_driver,
+            text_style,
+            line_height: 8,
         }
     }
 
     pub fn wipe(&mut self){
         self.ssd1306_driver.clear(BinaryColor::Off).unwrap();
+    }
+
+    pub fn draw_line(&mut self, line_pos: i32,text: &str) {
+        Text::new(text, Point::new(0,(1 + line_pos)*self.line_height), self.text_style)
+            .draw(&mut self.ssd1306_driver)
+            .unwrap();
+
+    }
+
+    pub fn draw_logs(&mut self, logs:[&str;8]) {
+        self.wipe();
+        for (index,&log) in logs.iter().enumerate() {
+            self.draw_line(index as i32,log);
+        }
+        self.ssd1306_driver.flush().unwrap();
     }
 }
